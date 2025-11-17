@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Motion Graph Concept Practice</title>
+  <style>
+    /* Default Night Mode Styles */
+    :root {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --canvas-bg: #1e1e1e;
+      --border-color: #333;
+      --primary-accent: #bb86fc; /* Purple */
+      --button-bg: #2a2a2a;
+      --button-hover-bg: #3a3a3a;
+      --feedback-correct: #03dac6; /* Teal */
+      --feedback-incorrect: #cf6679; /* Reddish */
+      --axis-color: #e0e0e0; /* Light gray */
+    }
+
+    /* Light Mode Styles (applied via class) */
+    body.light-mode {
+      --bg-color: #ffffff;
+      --text-color: #333333;
+      --canvas-bg: #fafafa;
+      --border-color: #cccccc;
+      --primary-accent: #0077cc; /* Blue */
+      --button-bg: #f0f0f0;
+      --button-hover-bg: #e0e0e0;
+      --feedback-correct: green;
+      --feedback-incorrect: red;
+      --axis-color: #000000; /* Black */
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 10px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+      font-size: 1.25em;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.8em;
+    }
+    #graphCanvas {
+      border: 1px solid var(--border-color);
+      display: block;
+      margin: 0 auto 20px auto;
+      background-color: var(--canvas-bg);
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+    #questionArea {
+      margin-top: 10px;
+    }
+    #answerForm div {
+      margin: 4px 0;
+    }
+    #controls {
+      margin-top: 25px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #feedback {
+      font-weight: bold;
+    }
+    button {
+      cursor: pointer;
+      padding: 8px 15px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background-color: var(--button-bg);
+      color: var(--text-color);
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+      font-size: 1em;
+    }
+    button:hover {
+      background-color: var(--button-hover-bg);
+    }
+    input[type="radio"] + label {
+        margin-left: 5px;
+    }
+    
+    #themeToggleArea {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Motion Graph Concept Practice</h1>
+  <canvas id="graphCanvas" width="625" height="438"></canvas> 
+<div id="questionArea">
+    <p id="questionText"></p>
+    <form id="answerForm"></form>
+
+    <div id="controls">
+      <button id="submitBtn" type="button">Submit</button>
+      <button id="newBtn" type="button">New Graph &amp; Question</button>
+      <span id="feedback"></span>
+    </div>
+
+    <div id="themeToggleArea">
+      <button id="toggleThemeBtn" type="button">Toggle Light Mode</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("graphCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const margin = 50; 
+      const plotWidth = width - 2 * margin;
+      
+      const plotTop = margin;
+      const plotBottom = height - margin;
+      const originY = (plotTop + plotBottom) / 2;
+      const plotHalfHeight = (plotBottom - plotTop) / 2;
+
+      const tMin = 0;
+      const tMax = 1;
+
+      function tToCanvasX(t) {
+        return margin + ((t - tMin) / (tMax - tMin)) * plotWidth;
+      }
+
+      function clearCanvas() {
+        ctx.clearRect(0, 0, width, height);
+      }
+
+      function drawAxes(yLabel, originY) {
+        ctx.save();
+        // FIX: Changed document.documentElement to document.body
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--axis-color');
+        ctx.lineWidth = 1;
+        ctx.font = "17.5px Arial";
+        // FIX: Changed document.documentElement to document.body
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--axis-color');
+
+        // Vertical axis
+        ctx.beginPath();
+        ctx.moveTo(margin, margin);
+        ctx.lineTo(margin, height - margin);
+        ctx.stroke();
+
+        // Horizontal axis (at originY)
+        ctx.beginPath();
+        ctx.moveTo(margin, originY);
+        ctx.lineTo(width - margin, originY);
+        ctx.stroke();
+
+        // Labels
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("time", (margin + width - margin) / 2, originY + 15);
+
+        ctx.save();
+        ctx.translate(margin - 20, (margin + height - margin) / 2); 
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(yLabel, 0, 0);
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      const scenarios = [
+        {
+          id: 1,
+          name: "At rest at a positive position",
+          motionType: "rest",
+          direction: "none",
+          velocitySign: "zero",
+          accelerationSign: "zero",
+          positionAt: function (t) { return 0.6; },
+          velocityAt: function (t) { return 0.0; }
+        },
+        {
+          id: 2,
+          name: "Constant positive velocity",
+          motionType: "constant",
+          direction: "positive",
+          velocitySign: "positive",
+          accelerationSign: "zero",
+          positionAt: function (t) { return 0.6 * t; },
+          velocityAt: function (t) { return 0.6; }
+        },
+        {
+          id: 3,
+          name: "Constant negative velocity",
+          motionType: "constant",
+          direction: "negative",
+          velocitySign: "negative",
+          accelerationSign: "zero",
+          positionAt: function (t) { return -0.6 * t; },
+          velocityAt: function (t) { return -0.6; }
+        },
+        {
+          id: 4,
+          name: "Positive direction, speeding up (start from rest)",
+          motionType: "speedingUp",
+          direction: "positive",
+          velocitySign: "positive",
+          accelerationSign: "positive",
+          positionAt: function (t) { return 0.6 * t * t; },
+          velocityAt: function (t) { return 1.2 * t; }
+        },
+        {
+          id: 5,
+          name: "Positive direction, slowing down (end at rest)",
+          motionType: "slowingDown",
+          direction: "positive",
+          velocitySign: "positive",
+          accelerationSign: "negative",
+          positionAt: function (t) { return 1.2 * t - 0.6 * t * t; },
+          velocityAt: function (t) { return 1.2 - 1.2 * t; }
+        },
+        {
+          id: 6,
+          name: "Negative direction, speeding up (start from rest)",
+          motionType: "speedingUp",
+          direction: "negative",
+          velocitySign: "negative",
+          accelerationSign: "negative",
+          positionAt: function (t) { return -0.6 * t * t; },
+          velocityAt: function (t) { return -1.2 * t; }
+        },
+        {
+          id: 7,
+          name: "Negative direction, slowing down (end at rest)",
+          motionType: "slowingDown",
+          direction: "negative",
+          velocitySign: "negative",
+          accelerationSign: "positive",
+          positionAt: function (t) { return -1.2 * t + 0.6 * t * t; },
+          velocityAt: function (t) { return -1.2 + 1.2 * t; }
+        }
+      ];
+
+      function renderScenario(scenario, graphType) {
+        clearCanvas();
+
+        const yLabel = (graphType === "position") ? "position" : "velocity";
+
+        drawAxes(yLabel, originY);
+
+        const dataMaxY = (graphType === "position") ? 0.7 : 1.3;
+
+        function yToCanvasY(y) {
+          return originY - (y / dataMaxY) * plotHalfHeight;
+        }
+
+        const points = [];
+        const step = 0.01;
+        for (let t = tMin; t <= tMax + 1e-6; t += step) {
+          const yVal = (graphType === "position")
+            ? scenario.positionAt(t)
+            : scenario.velocityAt(t);
+          points.push({ t, y: yVal });
+        }
+        
+        ctx.save();
+        // FIX: Changed document.documentElement to document.body
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-accent');
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        let first = true;
+        for (const p of points) {
+          const cx = tToCanvasX(p.t);
+          const cy = yToCanvasY(p.y);
+          if (first) {
+            ctx.moveTo(cx, cy);
+            first = false;
+          } else {
+            ctx.lineTo(cx, cy);
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const questions = [
+        {
+          id: "speedChange",
+          text: "Is the object speeding up, slowing down, or at constant velocity?",
+          options: ["speeding up", "slowing down", "constant velocity"],
+          isValidFor: function (_scenario) { return true; },
+          getCorrect: function (scenario) {
+            if (scenario.motionType === "rest") { return "constant velocity"; }
+            if (scenario.motionType === "constant") { return "constant velocity"; }
+            if (scenario.motionType === "speedingUp") { return "speeding up"; }
+            if (scenario.motionType === "slowingDown") { return "slowing down"; }
+            const v = scenario.velocitySign;
+            const a = scenario.accelerationSign;
+            if (a === "zero") return "constant velocity";
+            if ((v === "positive" && a === "positive") ||
+                (v === "negative" && a === "negative")) {
+              return "speeding up";
+            }
+            return "slowing down";
+          }
+        },
+        {
+          id: "direction",
+          text: "Is the object traveling in the positive or negative direction?",
+          options: ["positive", "negative", "it is not moving"],
+          isValidFor: function (_scenario) { return true; },
+          getCorrect: function (scenario) {
+            if (scenario.direction === "positive") return "positive";
+            if (scenario.direction === "negative") return "negative";
+            return "it is not moving";
+          }
+        },
+        {
+          id: "velocitySign",
+          text: "Does the object have positive velocity or negative velocity?",
+          options: ["positive velocity", "negative velocity", "zero velocity"],
+          isValidFor: function (_scenario) { return true; },
+          getCorrect: function (scenario) {
+            if (scenario.velocitySign === "positive") return "positive velocity";
+            if (scenario.velocitySign === "negative") return "negative velocity";
+            return "zero velocity";
+          }
+        },
+        {
+          id: "accelSign",
+          text: "Does the object have positive acceleration or negative acceleration?",
+          options: ["positive acceleration", "negative acceleration", "zero acceleration"],
+          isValidFor: function (_scenario) { return true; },
+          getCorrect: function (scenario) {
+            if (scenario.accelerationSign === "positive") return "positive acceleration";
+            if (scenario.accelerationSign === "negative") return "negative acceleration";
+            return "zero acceleration";
+          }
+        }
+      ];
+
+      function randomChoice(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      let currentScenario = null;
+      let currentQuestion = null;
+      let currentGraphType = null;
+      let correctAnswer = null;
+
+      function renderQuestion() {
+        const qText = document.getElementById("questionText");
+        const form = document.getElementById("answerForm");
+        qText.textContent = currentQuestion.text;
+        form.innerHTML = "";
+
+        currentQuestion.options.forEach((opt, index) => {
+          const id = "opt" + index;
+          const div = document.createElement("div");
+
+          const radio = document.createElement("input");
+          radio.type = "radio";
+          radio.name = "answer";
+          radio.value = opt;
+          radio.id = id;
+
+          const label = document.createElement("label");
+          label.setAttribute("for", id);
+          label.textContent = " " + opt;
+
+          div.appendChild(radio);
+          div.appendChild(label);
+          form.appendChild(div);
+        });
+      }
+
+      function loadNewProblem() {
+        currentScenario = randomChoice(scenarios);
+        currentGraphType = Math.random() < 0.5 ? "position" : "velocity";
+
+        currentQuestion = randomChoice(
+          questions.filter(q => q.isValidFor(currentScenario))
+        );
+
+        correctAnswer = currentQuestion.getCorrect(currentScenario);
+
+        renderScenario(currentScenario, currentGraphType);
+        renderQuestion();
+        const feedback = document.getElementById("feedback");
+        feedback.textContent = "";
+        // FIX: Changed document.documentElement to document.body
+        feedback.style.color = getComputedStyle(document.body).getPropertyValue('--text-color');
+      }
+
+      document.getElementById("submitBtn").addEventListener("click", function () {
+        const form = document.getElementById("answerForm");
+        const feedback = document.getElementById("feedback");
+        const selected = form.querySelector("input[name='answer']:checked");
+
+        if (!selected) {
+          // FIX: Changed document.documentElement to document.body
+          feedback.textContent = "Please choose an answer first.";
+          feedback.style.color = getComputedStyle(document.body).getPropertyValue('--feedback-incorrect');
+          return;
+        }
+
+        if (selected.value === correctAnswer) {
+          feedback.textContent = "Correct!";
+          // FIX: Changed document.documentElement to document.body
+          feedback.style.color = getComputedStyle(document.body).getPropertyValue('--feedback-correct');
+        } else {
+          feedback.textContent = "Not quite. Correct answer: " + correctAnswer + ".";
+          // FIX: Changed document.documentElement to document.body
+          feedback.style.color = getComputedStyle(document.body).getPropertyValue('--feedback-incorrect');
+        }
+      });
+
+      document.getElementById("newBtn").addEventListener("click", function () {
+        loadNewProblem();
+      });
+
+      const toggleThemeBtn = document.getElementById("toggleThemeBtn");
+      toggleThemeBtn.addEventListener("click", function() {
+        document.body.classList.toggle("light-mode");
+        const isLightMode = document.body.classList.contains("light-mode");
+        localStorage.setItem("theme", isLightMode ? "light" : "dark");
+        toggleThemeBtn.textContent = isLightMode ? "Toggle Night Mode" : "Toggle Light Mode";
+        
+        if (currentScenario && currentGraphType) {
+            renderScenario(currentScenario, currentGraphType);
+        }
+        
+        const feedback = document.getElementById("feedback");
+        if (feedback.textContent) {
+             const isCorrect = feedback.textContent === "Correct!";
+             if (isCorrect) {
+                 // FIX: Changed document.documentElement to document.body
+                 feedback.style.color = getComputedStyle(document.body).getPropertyValue('--feedback-correct');
+             } else {
+                 // FIX: Changed document.documentElement to document.body
+                 feedback.style.color = getComputedStyle(document.body).getPropertyValue('--feedback-incorrect');
+             }
+        }
+      });
+
+      function loadThemePreference() {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light") {
+          document.body.classList.add("light-mode");
+          toggleThemeBtn.textContent = "Toggle Night Mode";
+        } else {
+          toggleThemeBtn.textContent = "Toggle Light Mode";
+        }
+      }
+
+      window.addEventListener("load", function() {
+        loadThemePreference();
+        loadNewProblem();
+      });
+
+    })();
+  </script>
+</body>
+</html>
