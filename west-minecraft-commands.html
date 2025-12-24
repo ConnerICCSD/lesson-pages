@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>West Minecraft — Commands</title>
+
+  <!-- Optional pixel-style font (will fall back gracefully if blocked/offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg0:#16331a;
+      --bg1:#3a7a3b;
+      --panel:#121a14cc;
+      --panel2:#0f1712cc;
+      --text:#e9f2e6;
+      --muted:#b7c7b2;
+      --accent:#6ee46a;
+      --accent2:#3bd1ff;
+      --warn:#ffcc66;
+      --danger:#ff6b6b;
+      --border:#2f4b36;
+      --shadow: rgba(0,0,0,.45);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --pixel: "Press Start 2P", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    /* Minecraft-ish tiled vibe using pure CSS (no images) */
+    body{
+      margin:0;
+      color:var(--text);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.45)),
+        /* subtle grass/dirt bands */
+        repeating-linear-gradient(180deg,
+          rgba(66,175,88,.14) 0 90px,
+          rgba(122,86,52,.12) 90px 180px),
+        /* gentle texture */
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.035) 0 18px,
+          rgba(0,0,0,.03) 18px 36px),
+        radial-gradient(1200px 700px at 20% 0%, rgba(95,210,125,.22) 0%, transparent 60%),
+        radial-gradient(1200px 700px at 80% 20%, rgba(80,170,200,.14) 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height:100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px 16px 40px;
+    }
+
+    header{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+      padding: 18px 16px;
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      box-shadow: 0 16px 40px var(--shadow);
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width: 280px;
+    }
+
+    h1{
+      margin:0;
+      font-family: var(--pixel);
+      font-size: 18px;
+      letter-spacing:.5px;
+      line-height: 1.25;
+    }
+
+    .sub{
+      margin:0;
+      color:var(--muted);
+      line-height:1.4;
+      max-width: 62ch;
+    }
+    .dot2{ background: var(--accent2); box-shadow: 0 0 12px rgba(59,209,255,.6); }
+
+    .grid{
+      margin-top: 16px;
+      display:grid;
+      gap: 14px;
+    }
+
+    details{
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(18,26,20,.75), rgba(15,23,18,.70));
+      box-shadow: 0 10px 30px var(--shadow);
+      overflow:hidden;
+    }
+
+    summary{
+      cursor:pointer;
+      padding: 16px 16px;
+      list-style: none;
+      user-select:none;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:12px;
+    }
+    summary::-webkit-details-marker{ display:none; }
+
+    .sum-left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 220px;
+    }
+
+    .badge{
+      font-family: var(--pixel);
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    .sum-title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .sum-title strong{
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .sum-title span{
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chev{
+      width: 10px; height:10px;
+      border-right: 3px solid var(--muted);
+      border-bottom: 3px solid var(--muted);
+      transform: rotate(-45deg);
+      transition: transform .15s ease;
+      opacity:.85;
+    }
+    details[open] .chev{ transform: rotate(45deg); }
+
+    .content{
+      padding: 0 16px 16px;
+      border-top: 1px solid rgba(47,75,54,.55);
+    }
+
+    .note{
+      margin: 12px 0 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(47,75,54,.85);
+      background: rgba(0,0,0,.27);
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .note strong{ color: var(--text); }
+
+    .cmdlist{
+      display:grid;
+      gap: 10px;
+      margin: 12px 0 0;
+    }
+
+    .cmd{
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-start;
+      gap: 12px;
+      padding: 12px 12px;
+      border: 1px solid rgba(47,75,54,.75);
+      border-radius: 14px;
+      background: rgba(0,0,0,.25);
+    }
+
+    .cmd .left{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 0;
+    }
+
+    .code{
+      font-family: var(--mono);
+      font-size: 14px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(47,75,54,.65);
+      border-radius: 10px;
+      padding: 8px 10px;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .desc{
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: 13px;
+      max-width: 68ch;
+    }
+
+    .actions{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex-shrink: 0;
+    }
+
+    .btn{
+      cursor:pointer;
+      border: 1px solid rgba(47,75,54,.95);
+      border-radius: 12px;
+      padding: 10px 10px;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(110,228,106,.22), rgba(0,0,0,.15));
+      box-shadow:
+        0 10px 22px var(--shadow),
+        inset 0 1px 0 rgba(255,255,255,.08);
+      font-family: var(--pixel);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      line-height: 1.1;
+      min-width: 98px;
+      text-align:center;
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    .tag{
+      display:inline-block;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(47,75,54,.75);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      width: fit-content;
+    }
+    .tag.warn{ color: var(--warn); border-color: rgba(255,204,102,.45); }
+    .tag.danger{ color: var(--danger); border-color: rgba(255,107,107,.45); }
+
+    footer{
+      margin-top: 14px;
+      color: rgba(233,242,230,.55);
+      font-size: 12px;
+      line-height: 1.45;
+      text-align:center;
+    }
+
+    @media (max-width: 520px){
+      .actions{ flex-direction: row; }
+      .btn{ min-width: 88px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>West Minecraft — Command Cheat Sheet</h1>
+        <p class="sub">
+          Click a section to expand. Copy buttons work in modern browsers.
+        </p>
+      </div>
+    </header>
+
+    <div class="grid" id="sections">
+
+      <details open data-section>
+        <summary>
+          <div class="sum-left">
+            <div class="badge">HOME</div>
+            <div class="sum-title">
+              <strong>Homes</strong>
+              <span>Save spots and teleport back</span>
+            </div>
+          </div>
+          <div class="chev" aria-hidden="true"></div>
+        </summary>
+        <div class="content">
+          <div class="note"><strong>Tip:</strong> Name homes something obvious like <code>mine</code>, <code>village</code>, <code>base</code>.</div>
+          <div class="cmdlist">
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/sethome [home name]</div>
+                <div class="desc">Create a home at your current location.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/sethome [home name]">Copy</button>
+              </div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/home [home name]</div>
+                <div class="desc">Teleport to one of your homes.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/home [home name]">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details data-section>
+        <summary>
+          <div class="sum-left">
+            <div class="badge">WARP</div>
+            <div class="sum-title">
+              <strong>Warps</strong>
+              <span>Server-made destinations</span>
+            </div>
+          </div>
+          <div class="chev" aria-hidden="true"></div>
+        </summary>
+        <div class="content">
+          <div class="note"><strong>Note:</strong> Warps are set by admins. Ask a mod if you want one added.</div>
+          <div class="cmdlist">
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/warp [warp name]</div>
+                <div class="desc">Teleport to a server warp.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/warp [warp name]">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details data-section>
+        <summary>
+          <div class="sum-left">
+            <div class="badge">CLAIM</div>
+            <div class="sum-title">
+              <strong>Land Claims (GriefPrevention)</strong>
+              <span>Protect your base and share access</span>
+            </div>
+          </div>
+          <div class="chev" aria-hidden="true"></div>
+        </summary>
+        <div class="content">
+          <div class="note">
+            <strong>Basics:</strong> Claim with a <b>golden shovel</b>. Visualize borders with a <b>stick</b> (investigation tool).
+          </div>
+
+          <div class="cmdlist">
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/trust [player]</div>
+                <div class="desc">Full build permission inside your claim.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/trust [player]">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/accesstrust [player]</div>
+                <div class="desc">Access to doors, buttons, levers, beds.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/accesstrust [player]">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/containertrust [player]</div>
+                <div class="desc">Access to chests/containers and other “inventory” interactions.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/containertrust [player]">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/permissiontrust [player]</div>
+                <div class="desc">Allows them to share their trust level with others.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/permissiontrust [player]">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/trustlist</div>
+                <div class="desc">See who has access to your current claim.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/trustlist">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/untrust [player]</div>
+                <div class="desc">Remove a player’s permissions from the claim you’re in.</div>
+                              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/untrust [player]">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/untrust all</div>
+                <div class="desc">Remove everyone’s permissions from the claim you’re in.</div>
+                <span class="tag danger">Big hammer</span>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/untrust all">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/abandonclaim</div>
+                <div class="desc">Delete the claim you’re currently standing in.</div>
+                <span class="tag danger">Deletes claim</span>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/abandonclaim">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/abandonallclaims</div>
+                <div class="desc">Delete all of your claims.</div>
+                <span class="tag danger">Deletes everything</span>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/abandonallclaims">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/claimslist</div>
+                <div class="desc">List your claims and claim-block info.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/claimslist">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/claiminfo</div>
+                <div class="desc">Shows information about the claim you’re standing in.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/claiminfo">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/subdivideclaims</div>
+                <div class="desc">Switch shovel into sub-claim mode (plots inside a bigger claim).</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/subdivideclaims">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/basicclaims</div>
+                <div class="desc">Return shovel to normal claim mode.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/basicclaims">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/restrictsubclaim</div>
+                <div class="desc">Make new sub-claims NOT inherit parent permissions (useful for private rooms).</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/restrictsubclaim">Copy</button>
+              </div>
+            </div>
+
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/claimexplosions</div>
+                <div class="desc">Toggle whether explosions affect your claim.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" data-copy="/claimexplosions">Copy</button>
+              </div>
+            </div>
+</details>
+
+      <details data-section>
+        <summary>
+          <div class="sum-left">
+            <div class="badge">TPA</div>
+            <div class="sum-title">
+              <strong>Teleport Requests</strong>
+              <span>Ask first — don’t spam</span>
+            </div>
+          </div>
+          <div class="chev" aria-hidden="true"></div>
+        </summary>
+        <div class="content">
+          <div class="note"><strong>Etiquette:</strong> Always ask in chat before sending requests.</div>
+          <div class="cmdlist">
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpa [player]</div>
+                <div class="desc">Request to teleport to another player.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpa [player]">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpahere [player]</div>
+                <div class="desc">Request that a player teleport to you.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpahere [player]">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpaccept</div>
+                <div class="desc">Accept a teleport request.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpaccept">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpdeny</div>
+                <div class="desc">Deny a teleport request.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpdeny">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpacancel</div>
+                <div class="desc">Cancel a request you sent.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpacancel">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/tpatoggle</div>
+                <div class="desc">Toggle incoming requests on/off.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/tpatoggle">Copy</button></div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details data-section>
+        <summary>
+          <div class="sum-left">
+            <div class="badge">GRAVE</div>
+            <div class="sum-title">
+              <strong>Death Chests (GravesX)</strong>
+              <span>Find your grave and recover items</span>
+            </div>
+          </div>
+          <div class="chev" aria-hidden="true"></div>
+        </summary>
+        <div class="content">
+          <div class="note">
+            <strong>Teleporting:</strong> GravesX supports an OP teleport command, but players on this server shouldn’t have it.
+            Use the coordinates + compass guidance instead.
+          </div>
+          <div class="cmdlist">
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/graves</div>
+                <div class="desc">Open your graves menu / info (coordinates, tracking, etc.).</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/graves">Copy</button></div>
+            </div>
+            <div class="cmd" data-cmd>
+              <div class="left">
+                <div class="code">/graves help</div>
+                <div class="desc">Shows plugin info and help.</div>
+              </div>
+              <div class="actions"><button class="btn" data-copy="/graves help">Copy</button></div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+    <footer>
+      If a command is not working, ask a server administrator.</footer>
+  </div>
+
+  <script>
+    // Copy buttons
+    function copyText(text){
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve();
+    }
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-copy]');
+      if(!btn) return;
+      const text = btn.getAttribute('data-copy') || '';
+      const old = btn.textContent;
+      try{
+        await copyText(text);
+        btn.textContent = 'Copied!';
+        setTimeout(()=> btn.textContent = old, 800);
+      } catch {
+        btn.textContent = 'Copy failed';
+        setTimeout(()=> btn.textContent = old, 900);
+      }
+    });
+  </script>
+</body>
+</html>
